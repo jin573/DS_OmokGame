@@ -7,6 +7,9 @@ PlayerView set_nickname(PlayerView client_info, char* nickname);
 void *t_function(void* arg);
 
 
+struct RoomInfo rooms[MAX_ROOM];
+ClientList client_list = {NULL, 0};
+
 int main(int argc, char *argv[]) {
 	//error msg
 	//port number ex)./socket_test 8080
@@ -17,7 +20,6 @@ int main(int argc, char *argv[]) {
 
 
 	//room setting 
-	struct RoomInfo rooms[MAX_ROOM];
 	init_rooms(rooms);
 	printf("Room initialized (10 rooms ready)\n");
 
@@ -36,8 +38,6 @@ int main(int argc, char *argv[]) {
     server.sin_addr.s_addr = INADDR_ANY;
     server.sin_port = htons((u_short) atoi(argv[1]));
 
-	//client_list setting
-	struct ClientList client_list = {NULL, 0};
 	int opt = 1;
 	if (setsockopt
 			(request_sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
@@ -81,31 +81,6 @@ int main(int argc, char *argv[]) {
 			}
 
 		}
-/*
-		//init client
-		PlayerView client_info = init_client(client_sock, &client);
-		printf("client accept: %s client num: %d client name: %s\n", 
-				inet_ntoa(client.sin_addr),
-				client_info.client_id, client_info.nick);
-		
-		//change nickname
-		int n = recv_line(client_sock, buffer, sizeof(buffer));
-		if(n > 0){
-			buffer[n] = '\0';
-			if(strncmp(buffer, "NICK", 4) == 0){
-				char* nick = buffer + 5;
-				trim_newline(nick);
-				printf("nickname: [%s]\n", nick);
-
-				client_info = set_nickname(client_info, nick);
-				insert_client(&client_list, client_info);
-				print_clients(&client_list);
-				send(client_sock, "OK NICK\n", 8, 0);
-			}
-		}
-
-*/		
-		//close(client_sock);
 	}
 	//close
     close(request_sock);
@@ -149,7 +124,8 @@ void *t_function(void *arg){
 	ThreadArg *targ = (ThreadArg *)arg;
 	int client_sock = targ->client_sock;
 	struct sockaddr_in client = targ->client;
-	ClientList* client_list = targ->client_list; //??
+	free(targ);
+
 	char buffer[1024];
 
 	while(1){
@@ -171,17 +147,28 @@ void *t_function(void *arg){
 				printf("[Server] nickname: [%s]\n", nick);
 
 				client_info = set_nickname(client_info, nick);
-				insert_client(client_list, client_info);
-				print_clients(client_list);
+				insert_client(&client_list, client_info);
+				print_clients(&client_list);
 				send(client_sock, "OK NICK\n", 8, 0);
-			}
-			else if(strncmp(buffer, "LIST", 4) == 0){
-				printf("[Server] list\n");
-				char response[256];
-    			snprintf(response, sizeof(response), "ROOMS 0:0:WAIT 1:2:START 2:1:READY\n");
-    			send(client_sock, response, strlen(response), 0);
-
-			}
+			}else if(strncmp(buffer, "LIST", 4) == 0){
+				//handle_list(client_sock);
+				printf("[Server] LIST command received\n");
+			}else if(strncmp(buffer, "JOIN", 4) == 0){
+            	// handle_join(client_sock, buffer);
+            	printf("[Server] JOIN command received\n");
+        	}else if(strncmp(buffer, "READY", 5) == 0){
+            	// handle_ready(client_sock);
+            	printf("[Server] READY command received\n");
+        	}else if(strncmp(buffer, "LEAVE", 5) == 0){
+            	// handle_leave(client_sock);
+          		printf("[Server] LEAVE command received\n");
+        	}else if(strncmp(buffer, "QUIT", 4) == 0){
+           	 	// handle_quit(client_sock);
+           		 printf("[Server] QUIT command received\n");
+           		 break;
+       		 } else{
+            	printf("[Server] Unknown command: %s\n", buffer);
+       		 }
 		}
 	}
 	close(client_sock);
