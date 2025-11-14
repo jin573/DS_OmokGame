@@ -1,9 +1,9 @@
 #include "./socket_common.h"
 #include "./client_list.h"
+#include "./server_handler.h"
 
 void init_rooms(struct RoomInfo rooms[]);
 PlayerView init_client(int sock, struct sockaddr_in *addr);
-PlayerView set_nickname(PlayerView client_info, char* nickname);
 void *t_function(void* arg);
 
 
@@ -17,7 +17,6 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Usage: %s <port>\n", argv[0]);
         exit(1);
     }
-
 
 	//room setting 
 	init_rooms(rooms);
@@ -111,12 +110,6 @@ PlayerView init_client(int client_sock, struct sockaddr_in* addr){
 	return client_info;
 }
 
-PlayerView set_nickname(PlayerView client_info, char* nickname){
-	strncpy(client_info.nick, nickname, MAX_NICK - 1);
-	client_info.nick[MAX_NICK - 1]='\0';
-	return client_info;
-}
-
 void *t_function(void *arg){
 	pid_t pid = getpid();
 	pthread_t tid = pthread_self();
@@ -141,34 +134,22 @@ void *t_function(void *arg){
 		int n = recv_line(client_sock, buffer, sizeof(buffer));
 		if(n > 0){
 			buffer[n] = '\0';
-			if(strncmp(buffer, "NICK", 4) == 0){
-				char* nick = buffer + 5;
-				trim_newline(nick);
-				printf("[Server] nickname: [%s]\n", nick);
-
-				client_info = set_nickname(client_info, nick);
-				insert_client(&client_list, client_info);
-				print_clients(&client_list);
-				send(client_sock, "OK NICK\n", 8, 0);
-			}else if(strncmp(buffer, "LIST", 4) == 0){
-				//handle_list(client_sock);
-				printf("[Server] LIST command received\n");
-			}else if(strncmp(buffer, "JOIN", 4) == 0){
-            	// handle_join(client_sock, buffer);
-            	printf("[Server] JOIN command received\n");
-        	}else if(strncmp(buffer, "READY", 5) == 0){
-            	// handle_ready(client_sock);
-            	printf("[Server] READY command received\n");
-        	}else if(strncmp(buffer, "LEAVE", 5) == 0){
-            	// handle_leave(client_sock);
-          		printf("[Server] LEAVE command received\n");
-        	}else if(strncmp(buffer, "QUIT", 4) == 0){
-           	 	// handle_quit(client_sock);
-           		 printf("[Server] QUIT command received\n");
-           		 break;
-       		 } else{
-            	printf("[Server] Unknown command: %s\n", buffer);
-       		 }
+          if(strncmp(buffer, "NICK", 4) == 0){
+			  handle_nick(client_sock, &client_info);
+		  }else if(strncmp(buffer, "LIST", 4) == 0){
+			  handle_list(client_sock);
+		  }else if(strncmp(buffer, "JOIN", 4) == 0){
+			  handle_join(client_sock);
+		  }else if(strncmp(buffer, "READY", 5) == 0){
+			  handle_ready(client_sock);
+		  }else if(strncmp(buffer, "LEAVE", 5) == 0){
+			  handle_leave(client_sock);
+		  }else if(strncmp(buffer, "QUIT", 4) == 0){
+			  handle_quit(client_sock);
+			  break;
+		  } else {
+			  printf("[Server] Unknown command: %s\n", buffer);
+		  } 
 		}
 	}
 	close(client_sock);
