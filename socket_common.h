@@ -41,16 +41,16 @@ static inline void err_display_err_code(int errorcode){
 
 enum RoomState{
 	STATE_WAIT,
-	STATE_READY,
+//	STATE_READY,
 	STATE_START
 };
 
-struct RoomInfo{
+typedef struct RoomInfo{
 	int room_id;
 	int count_client;
 	enum RoomState room_state; 
 	int client_info[MAX_CLIENT];
-};
+}RoomInfo;
 
 // 플레이어 구조체
 #ifndef MAX_NICK
@@ -84,7 +84,7 @@ typedef struct PlayerView {
 static inline const char* room_state_str(enum RoomState s){
     switch (s) {
         case STATE_WAIT:  return "WAIT"; // 대기
-        case STATE_READY: return "READY"; // 준비 완료
+//        case STATE_READY: return "READY"; // 준비 완료
         case STATE_START: return "START"; // 게임 중
         default:          return "UNKNOWN";
     }

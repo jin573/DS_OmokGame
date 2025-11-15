@@ -119,41 +119,43 @@ void *t_function(void *arg){
 	struct sockaddr_in client = targ->client;
 	free(targ);
 
+	
+	PlayerView client_info = init_client(client_sock, &client);
 	char buffer[1024];
 
 	while(1){
 		printf("[Server] process id: %d thread id: %u\n", pid, (unsigned int) tid);
 		//sleep(5);
 		//init client
-		PlayerView client_info = init_client(client_sock, &client);
 		printf("[Server] client accept: %s client num: %d\n", 
 				inet_ntoa(client.sin_addr),
 				client_info.client_id);
 		
 		//change nickname
 		int n = recv_line(client_sock, buffer, sizeof(buffer));
-		if(n > 0){
-			buffer[n] = '\0';
-          if(strncmp(buffer, "NICK", 4) == 0){
-			  handle_nick(client_sock, &client_info);
-		  }else if(strncmp(buffer, "LIST", 4) == 0){
-			  handle_list(client_sock);
-		  }else if(strncmp(buffer, "JOIN", 4) == 0){
-			  handle_join(client_sock);
-		  }else if(strncmp(buffer, "READY", 5) == 0){
-			  handle_ready(client_sock);
-		  }else if(strncmp(buffer, "LEAVE", 5) == 0){
-			  handle_leave(client_sock);
-		  }else if(strncmp(buffer, "QUIT", 4) == 0){
-			  handle_quit(client_sock);
-			  break;
-		  } else {
-			  printf("[Server] Unknown command: %s\n", buffer);
-		  } 
-		}
+        if(n <= 0) break;
+
+        buffer[n] = '\0';
+        if(strncmp(buffer, "NICK", 4) == 0){
+            handle_nick(client_sock, &client_info, buffer);
+        } else if(strncmp(buffer, "LIST", 4) == 0){
+            handle_list(client_sock);
+        } else if(strncmp(buffer, "JOIN", 4) == 0){
+            handle_join(client_sock, &client_info, buffer);
+        } else if(strncmp(buffer, "READY", 5) == 0){
+            handle_ready(client_sock);
+        } else if(strncmp(buffer, "LEAVE", 5) == 0){
+            handle_leave(client_sock);
+        } else if(strncmp(buffer, "QUIT", 4) == 0){
+            handle_quit(client_sock);
+            break;
+        } else {
+            printf("[Server] Unknown command: %s\n", buffer);
+		 }
+	
 	}
 	close(client_sock);
-	free(targ);
+	//remove client
 	return NULL;
 }
 

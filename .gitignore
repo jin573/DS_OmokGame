@@ -3,3 +3,6 @@
 *.o
 socket_server
 socket_client
+
+#code
+socket_client.c
