@@ -133,7 +133,10 @@ void *t_function(void *arg){
 		
 		//change nickname
 		int n = recv_line(client_sock, buffer, sizeof(buffer));
-        if(n <= 0) break;
+        if(n <= 0){
+			printf("[Server] Client %d disconnected\n", client_info.client_id);
+			break;
+		}
 
         buffer[n] = '\0';
         if(strncmp(buffer, "NICK", 4) == 0){
@@ -154,8 +157,8 @@ void *t_function(void *arg){
 		 }
 	
 	}
+	remove_client(&client_list, client_info.client_id);
 	close(client_sock);
-	//remove client
 	return NULL;
 }
 

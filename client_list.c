@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include "./socket_common.h"
 #include <stdlib.h>
-
+#include "./client_list.h"
 
 //insert
 void insert_client(ClientList* client_list, PlayerView client_info){
@@ -17,7 +17,30 @@ void insert_client(ClientList* client_list, PlayerView client_info){
 }
 
 //remove
+void remove_client(ClientList* client_list, int client_id){
+	ClientNode* prev = NULL;
+	ClientNode* current = client_list->head;
 
+	while(current){
+		if(current->data.client_id == client_id){
+			if(prev){
+				prev->next = current->next;
+			}else{
+				client_list->head = current->next;
+			}
+			free(current);
+			client_list->count--;
+			printf("[Server] Client %d removed\n", client_id);
+			//test
+			print_clients(client_list);
+			return;
+		}
+
+		prev = current;
+		current = current->next;
+	}
+
+}
 
 //print
 void print_clients(ClientList* client_list){
