@@ -84,6 +84,7 @@ void handle_join(int client_sock, PlayerView* client_info, char* buffer){
     room->count_client++;
 
 	printf("[Handler] Client joined room %d\n", num);
+	send(client_sock, "OK JOIN\n", strlen("OK JOIN\n"), 0);
 }
 
 void handle_ready(int client_sock){
