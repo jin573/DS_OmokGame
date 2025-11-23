@@ -40,16 +40,6 @@ void handle_list(int client_sock){
 
 void handle_join(int client_sock, PlayerView* client_info, char* buffer){
     printf("[Handler] JOIN command received\n");
-	//1.check room number from client
-	//2.check room exist and count client
-	//3.check room state
-	//if ok
-	//	then update playerView_room_id
-	//		update ReadyState -> READY_NO
-	//		add RoomInfo.client_info
-	//		update RoomInfo.count_client ++
-	//else
-	//	print err
 
 	char* num_str = buffer + 5;
 	trim_newline(num_str);
@@ -78,21 +68,66 @@ void handle_join(int client_sock, PlayerView* client_info, char* buffer){
 	}
 
 	client_info->room_id = num;
+	//client_info->seat = ;//random
     client_info->ready = READY_NO;
+	//client_info->stone = ;//random
 
     room->client_info[room->count_client] = client_info->client_id;
     room->count_client++;
-
+	reorder_room_clients(room);
+	
 	printf("[Handler] Client joined room %d\n", num);
 	send(client_sock, "OK JOIN\n", strlen("OK JOIN\n"), 0);
 }
 
-void handle_ready(int client_sock){
-    printf("[Handler] READY command received\n");
+void handle_ready(int client_sock, PlayerView* client_info){
+	
+	printf("[Handler] READY command received\n");
 }
 
-void handle_leave(int client_sock){
-    printf("[Handler] LEAVE command received\n");
+void handle_leave(int client_sock, PlayerView* client_info){
+	printf("[LEAVE] Request from client_id=%d (socket=%d)\n",
+       client_info->client_id, client_sock);
+
+	if(client_info->room_id == -1){
+		send(client_sock, "ERR NOROOM\n", strlen("ERR NOROOM\n"), 0);
+		printf("[Handler] Already Leave Room\n");
+		return;
+	}
+
+	RoomInfo* room = &rooms[client_info->room_id];
+
+	printf("[LEAVE] Client room_id=%d, room.count_client=%d\n",
+       client_info->room_id, room->count_client);
+	
+	printf("[LEAVE] Room %d before: [%d, %d]\n",
+       room->room_id,
+       room->client_info[0],
+       room->client_info[1]);
+
+	for(int i=0; i<MAX_CLIENT; i++){
+		if(room->client_info[i] == client_info->client_id){
+			room->client_info[i] = -1;
+			printf("[LEAVE] Removing client_id=%d at index=%d\n",
+    		   client_info->client_id, i);
+			room->count_client--;
+		}
+	}
+
+	reorder_room_clients(room);
+	
+	printf("[LEAVE] Room %d after reorder: [%d, %d], count=%d\n",
+       room->room_id,
+       room->client_info[0],
+       room->client_info[1],
+       room->count_client);
+
+	client_info->room_id = -1;
+	client_info->ready = READY_NOT;
+	//in Game -> add reset seat, stone -> extends
+	send(client_sock, "OK LEAVE\n", strlen("OK LEAVE\n"), 0);
+	printf("[Handler] LEAVE command received\n");
+
 }
 
 void handle_quit(int client_sock){

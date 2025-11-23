@@ -146,9 +146,9 @@ void *t_function(void *arg){
         } else if(strncmp(buffer, "JOIN", 4) == 0){
             handle_join(client_sock, &client_info, buffer);
         } else if(strncmp(buffer, "READY", 5) == 0){
-            handle_ready(client_sock);
+            handle_ready(client_sock, &client_info);
         } else if(strncmp(buffer, "LEAVE", 5) == 0){
-            handle_leave(client_sock);
+            handle_leave(client_sock, &client_info);
         } else if(strncmp(buffer, "QUIT", 4) == 0){
             handle_quit(client_sock);
             break;
