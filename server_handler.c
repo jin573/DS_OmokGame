@@ -86,54 +86,21 @@ void handle_ready(int client_sock, PlayerView* client_info){
 }
 
 void handle_leave(int client_sock, PlayerView* client_info){
+	printf("[Handler] LEAVE command received\n");
 	printf("[LEAVE] Request from client_id=%d (socket=%d)\n",
        client_info->client_id, client_sock);
-
-	if(client_info->room_id == -1){
-		send(client_sock, "ERR NOROOM\n", strlen("ERR NOROOM\n"), 0);
-		printf("[Handler] Already Leave Room\n");
-		return;
-	}
-
-	RoomInfo* room = &rooms[client_info->room_id];
-
-	printf("[LEAVE] Client room_id=%d, room.count_client=%d\n",
-       client_info->room_id, room->count_client);
 	
-	printf("[LEAVE] Room %d before: [%d, %d]\n",
-       room->room_id,
-       room->client_info[0],
-       room->client_info[1]);
-
-	for(int i=0; i<MAX_CLIENT; i++){
-		if(room->client_info[i] == client_info->client_id){
-			room->client_info[i] = -1;
-			printf("[LEAVE] Removing client_id=%d at index=%d\n",
-    		   client_info->client_id, i);
-			room->count_client--;
-		}
-	}
-
-	reorder_room_clients(room);
-	
-	printf("[LEAVE] Room %d after reorder: [%d, %d], count=%d\n",
-       room->room_id,
-       room->client_info[0],
-       room->client_info[1],
-       room->count_client);
-
-	client_info->room_id = -1;
-	client_info->ready = READY_NOT;
-	//in Game -> add reset seat, stone -> extends
+	remove_client_in_room(client_sock, client_info);
 	send(client_sock, "OK LEAVE\n", strlen("OK LEAVE\n"), 0);
-	printf("[Handler] LEAVE command received\n");
-
 }
 
-void handle_quit(int client_sock){
+void handle_quit(int client_sock, PlayerView* client_info){
     printf("[Handler] QUIT command received\n");
-}
 
+	remove_client_in_room(client_sock, client_info);
+	send(client_sock, "OK QUIT\n", strlen("OK QUIT\n"), 0);
+	
+}
 
 PlayerView set_nickname(PlayerView client_info, char* nickname){
 	strncpy(client_info.nick, nickname, MAX_NICK - 1);
@@ -141,3 +108,41 @@ PlayerView set_nickname(PlayerView client_info, char* nickname){
 	return client_info;
 }
 
+void remove_client_in_room(int client_sock, PlayerView* client_info){
+	if(client_info->room_id == -1){
+        send(client_sock, "ERR NOROOM\n", strlen("ERR NOROOM\n"), 0);
+        printf("[Handler] Already Leave Room\n");
+        return;
+    }
+
+    RoomInfo* room = &rooms[client_info->room_id];
+
+    printf("[REMOVE CLIENT] Client room_id=%d, room.count_client=%d\n",
+       client_info->room_id, room->count_client);
+
+    printf("[REMOVE CLIETN] Room %d before: [%d, %d]\n",
+       room->room_id,
+       room->client_info[0],
+       room->client_info[1]);
+
+    for(int i=0; i<MAX_CLIENT; i++){
+        if(room->client_info[i] == client_info->client_id){
+            room->client_info[i] = -1;
+            printf("[REMOVE CLIENT] Removing client_id=%d at index=%d\n",
+               client_info->client_id, i);
+            room->count_client--;
+        }
+    }
+
+    reorder_room_clients(room);
+    
+    printf("[REMOVE CLIENT] Room %d after reorder: [%d, %d], count=%d\n",
+       room->room_id,
+       room->client_info[0],
+       room->client_info[1],
+       room->count_client);
+
+    client_info->room_id = -1;
+    client_info->ready = READY_NOT;
+    //in Game -> add reset seat, stone -> extends
+}

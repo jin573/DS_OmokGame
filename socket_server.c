@@ -150,9 +150,10 @@ void *t_function(void *arg){
         } else if(strncmp(buffer, "LEAVE", 5) == 0){
             handle_leave(client_sock, &client_info);
         } else if(strncmp(buffer, "QUIT", 4) == 0){
-            handle_quit(client_sock);
+			printf("[Handler] client request QUIT so call Handle_LEAVE\n");
+			handle_quit(client_sock, &client_info);
             break;
-        } else {
+		} else {
             printf("[Server] Unknown command: %s\n", buffer);
 		 }
 	

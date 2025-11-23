@@ -9,9 +9,9 @@ void handle_list(int client_sock);
 void handle_join(int client_sock, PlayerView* client_info, char* buffer);
 void handle_ready(int client_sock, PlayerView* client_info);
 void handle_leave(int client_sock, PlayerView* client_info);
-void handle_quit(int client_sock);
+void handle_quit(int client_sock, PlayerView* client_info);
 
 PlayerView set_nickname(PlayerView client_info, char* nickname);
-
+void remove_client_in_room(int client_sock, PlayerView* client_info);
 
 #endif
