@@ -120,7 +120,8 @@ void *t_function(void *arg){
 	free(targ);
 
 	
-	PlayerView client_info = init_client(client_sock, &client);
+	PlayerView* client_info = malloc(sizeof(PlayerView));
+	*client_info = init_client(client_sock, &client);
 	char buffer[1024];
 
 	while(1){
@@ -129,36 +130,36 @@ void *t_function(void *arg){
 		//init client
 		printf("[Server] client accept: %s client num: %d\n", 
 				inet_ntoa(client.sin_addr),
-				client_info.client_id);
+				client_info->client_id);
 		
 		//change nickname
 		int n = recv_line(client_sock, buffer, sizeof(buffer));
         if(n <= 0){
-			printf("[Server] Client %d disconnected\n", client_info.client_id);
+			printf("[Server] Client %d disconnected\n", client_info->client_id);
 			break;
 		}
 
         buffer[n] = '\0';
         if(strncmp(buffer, "NICK", 4) == 0){
-            handle_nick(client_sock, &client_info, buffer);
+            handle_nick(client_sock, client_info, buffer);
         } else if(strncmp(buffer, "LIST", 4) == 0){
             handle_list(client_sock);
         } else if(strncmp(buffer, "JOIN", 4) == 0){
-            handle_join(client_sock, &client_info, buffer);
+            handle_join(client_sock, client_info, buffer);
         } else if(strncmp(buffer, "READY", 5) == 0){
-            handle_ready(client_sock, &client_info);
+            handle_ready(client_sock, client_info);
         } else if(strncmp(buffer, "LEAVE", 5) == 0){
-            handle_leave(client_sock, &client_info);
+            handle_leave(client_sock, client_info);
         } else if(strncmp(buffer, "QUIT", 4) == 0){
 			printf("[Handler] client request QUIT so call Handle_LEAVE\n");
-			handle_quit(client_sock, &client_info);
+			handle_quit(client_sock, client_info);
             break;
 		} else {
             printf("[Server] Unknown command: %s\n", buffer);
 		 }
 	
 	}
-	remove_client(&client_list, client_info.client_id);
+	remove_client(&client_list, client_info->client_id);
 	close(client_sock);
 	return NULL;
 }

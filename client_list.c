@@ -4,25 +4,38 @@
 #include "./client_list.h"
 
 //insert
-void insert_client(ClientList* client_list, PlayerView client_info){
+void insert_client(ClientList* client_list, PlayerView* client_info){
 	//clientNode dynamic 
 	ClientNode* client_node = (ClientNode*)malloc(sizeof(ClientNode));
 
-	client_node->next = client_list->head;
 	client_node->data = client_info;
+	client_node->next = client_list->head;
 
 	client_list->head = client_node;
 	client_list->count++;
  
 }
 
+//search
+PlayerView* search_client(ClientList* client_list, int client_id){
+	ClientNode* current = client_list->head;
+
+	while(current){
+		if(current->data->client_id == client_id){
+			return current->data;
+		}
+		current = current->next;
+	}
+
+	return NULL;
+}
 //remove
 void remove_client(ClientList* client_list, int client_id){
 	ClientNode* prev = NULL;
 	ClientNode* current = client_list->head;
 
 	while(current){
-		if(current->data.client_id == client_id){
+		if(current->data->client_id == client_id){
 			if(prev){
 				prev->next = current->next;
 			}else{
@@ -49,7 +62,7 @@ void print_clients(ClientList* client_list){
 		client_node!=NULL;
 		client_node = client_node->next){
 			
-	printf("Client Name: %s\n", client_node->data.nick);
+	printf("Client Name: %s\n", client_node->data->nick);
 	}
 
 }

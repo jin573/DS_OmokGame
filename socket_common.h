@@ -4,6 +4,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <errno.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -126,7 +127,7 @@ static int recv_line(int sock, char* buf, size_t cap){
 
 typedef struct ClientNode{
     struct ClientNode* next;
-    struct PlayerView  data;   // client data
+    PlayerView*  data;   // client data
 } ClientNode;
 
 typedef struct ClientList{

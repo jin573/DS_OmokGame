@@ -14,7 +14,7 @@ void handle_nick(int client_sock, PlayerView* client_info, char* buffer){
 	printf("[Handler] nickname: [%s]\n", nick);
 
     *client_info = set_nickname(*client_info, nick);
-    insert_client(&client_list, *client_info);
+    insert_client(&client_list, client_info);
     print_clients(&client_list);
     send(client_sock, "OK NICK\n", 8, 0);
 }
@@ -80,9 +80,40 @@ void handle_join(int client_sock, PlayerView* client_info, char* buffer){
 	send(client_sock, "OK JOIN\n", strlen("OK JOIN\n"), 0);
 }
 
-void handle_ready(int client_sock, PlayerView* client_info){
-	
+void handle_ready(int client_sock, PlayerView* client_info){	
 	printf("[Handler] READY command received\n");
+
+	RoomInfo* room = &rooms[client_info->room_id];
+	bool ready_flag = true; 
+
+	if(room->room_state == STATE_START){
+		printf("[Handler] Already Started\n");
+		send(client_sock, "ERR START\n", strlen("ERR START\n"), 0);
+		return;
+	}
+
+	client_info->ready = (client_info->ready == READY_YES? READY_NO : READY_YES);
+
+
+	//check all player's state
+	for(int i=0; i<MAX_CLIENT; i++){
+		PlayerView* all_client = search_client(&client_list, room->client_info[i]);
+		printf("[SEARCH CLIENT] client_id: %d, ptr=%p\n", 
+				room->client_info[i], (void*)all_client);
+		if(!all_client || all_client->ready != READY_YES){
+			ready_flag = false;
+			break;
+		}
+	}
+
+	if(ready_flag){
+		//send
+		printf("[Handler] ALL CLIENT SET READY\n");
+	}
+
+
+	
+
 }
 
 void handle_leave(int client_sock, PlayerView* client_info){
@@ -145,4 +176,5 @@ void remove_client_in_room(int client_sock, PlayerView* client_info){
     client_info->room_id = -1;
     client_info->ready = READY_NOT;
     //in Game -> add reset seat, stone -> extends
+	//and change room state also
 }
