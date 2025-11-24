@@ -11,16 +11,16 @@ void handle_nick(int client_sock, PlayerView* client_info, char* buffer){
     char* nick = buffer + 5;
     trim_newline(nick);
     
-	printf("[Handler] nickname: [%s]\n", nick);
-
-    *client_info = set_nickname(*client_info, nick);
-    insert_client(&client_list, client_info);
+	set_nickname(client_info, nick);
+	insert_client(&client_list, client_info);
+	printf("[Handler][NICK] Client %d set nickname to '%s'\n", 
+			client_info->client_id, client_info->nick);
     print_clients(&client_list);
     send(client_sock, "OK NICK\n", 8, 0);
 }
 
 void handle_list(int client_sock){
-    printf("[Handler] LIST command\n");
+    printf("[Handler][LIST] LIST command\n");
 	
 	char response[512];
 	response[0] = '\0';
@@ -39,7 +39,7 @@ void handle_list(int client_sock){
 }
 
 void handle_join(int client_sock, PlayerView* client_info, char* buffer){
-    printf("[Handler] JOIN command received\n");
+    printf("[Handler][JOIN] JOIN command received\n");
 
 	char* num_str = buffer + 5;
 	trim_newline(num_str);
@@ -50,8 +50,6 @@ void handle_join(int client_sock, PlayerView* client_info, char* buffer){
 		send(client_sock, "ERR BADROOM\n", strlen("ERR BADROOM\n"), 0);
 		return;
 	}
-
-	printf("[Handler] JOIN Room Number: %d\n", num);
 
 	RoomInfo* room = &rooms[num];	
 
@@ -76,12 +74,17 @@ void handle_join(int client_sock, PlayerView* client_info, char* buffer){
     room->count_client++;
 	reorder_room_clients(room);
 	
-	printf("[Handler] Client joined room %d\n", num);
+	printf("[Handler][JOIN] Client %s (%d) joined room %d. Room state: %s, count=%d, clients=[%d,%d]\n", 
+			client_info->nick, client_info->client_id, num, 
+			room_state_str(room->room_state), room->count_client, 
+			room->client_info[0], room->client_info[1]);
 	send(client_sock, "OK JOIN\n", strlen("OK JOIN\n"), 0);
 }
 
 void handle_ready(int client_sock, PlayerView* client_info){	
-	printf("[Handler] READY command received\n");
+	printf("[Handler][READY] Client %s (%d) toggled ready. Current ready=%d\n",
+			client_info->nick, client_info->client_id, 
+			client_info->ready);
 
 	RoomInfo* room = &rooms[client_info->room_id];
 	bool ready_flag = true; 
@@ -98,7 +101,7 @@ void handle_ready(int client_sock, PlayerView* client_info){
 	//check all player's state
 	for(int i=0; i<MAX_CLIENT; i++){
 		PlayerView* all_client = search_client(&client_list, room->client_info[i]);
-		printf("[SEARCH CLIENT] client_id: %d, ptr=%p\n", 
+		printf("[Handler][READY][SEARCH CLIENT] client_id: %d, ptr=%p\n", 
 				room->client_info[i], (void*)all_client);
 		if(!all_client || all_client->ready != READY_YES){
 			ready_flag = false;
@@ -108,7 +111,7 @@ void handle_ready(int client_sock, PlayerView* client_info){
 
 	if(ready_flag){
 		//send
-		printf("[Handler] ALL CLIENT SET READY\n");
+		printf("[Handler][READY] ALL CLIENT SET READY\n");
 	}
 
 
@@ -118,25 +121,26 @@ void handle_ready(int client_sock, PlayerView* client_info){
 
 void handle_leave(int client_sock, PlayerView* client_info){
 	printf("[Handler] LEAVE command received\n");
-	printf("[LEAVE] Request from client_id=%d (socket=%d)\n",
-       client_info->client_id, client_sock);
+	printf("[Handler][LEAVE] Client %s (%d) requested LEAVE\n",
+			client_info->nick, client_info->client_id);
 	
 	remove_client_in_room(client_sock, client_info);
 	send(client_sock, "OK LEAVE\n", strlen("OK LEAVE\n"), 0);
 }
 
 void handle_quit(int client_sock, PlayerView* client_info){
-    printf("[Handler] QUIT command received\n");
+    printf("[Handler][QUIT] Client %s (%d) requested QUIT\n",
+			client_info->nick, client_info->client_id);
 
 	remove_client_in_room(client_sock, client_info);
 	send(client_sock, "OK QUIT\n", strlen("OK QUIT\n"), 0);
 	
 }
 
-PlayerView set_nickname(PlayerView client_info, char* nickname){
-	strncpy(client_info.nick, nickname, MAX_NICK - 1);
-	client_info.nick[MAX_NICK - 1]='\0';
-	return client_info;
+void set_nickname(PlayerView* client_info, char* nickname){
+	if(!client_info || !nickname) return;
+	strncpy(client_info->nick, nickname, MAX_NICK - 1);
+	client_info->nick[MAX_NICK - 1]='\0';
 }
 
 void remove_client_in_room(int client_sock, PlayerView* client_info){
@@ -147,31 +151,23 @@ void remove_client_in_room(int client_sock, PlayerView* client_info){
     }
 
     RoomInfo* room = &rooms[client_info->room_id];
-
-    printf("[REMOVE CLIENT] Client room_id=%d, room.count_client=%d\n",
-       client_info->room_id, room->count_client);
-
-    printf("[REMOVE CLIETN] Room %d before: [%d, %d]\n",
-       room->room_id,
-       room->client_info[0],
-       room->client_info[1]);
-
-    for(int i=0; i<MAX_CLIENT; i++){
-        if(room->client_info[i] == client_info->client_id){
+	printf("[Handler][REMOVE] Removing Client %s (%d) from room %d. Count before=%d\n", 
+			client_info->nick, client_info->client_id, room->room_id,
+			room->count_client);
+   
+	for(int i=0; i<MAX_CLIENT; i++){
+		if(room->client_info[i] == client_info->client_id){
             room->client_info[i] = -1;
-            printf("[REMOVE CLIENT] Removing client_id=%d at index=%d\n",
-               client_info->client_id, i);
             room->count_client--;
+			printf("[Handler][REMOVE] Cleared slot %d for client_id %d\n",
+					i, client_info->client_id);
         }
     }
 
     reorder_room_clients(room);
-    
-    printf("[REMOVE CLIENT] Room %d after reorder: [%d, %d], count=%d\n",
-       room->room_id,
-       room->client_info[0],
-       room->client_info[1],
-       room->count_client);
+	printf("[Handler][REMOVE] Room %d after reorder: count=%d, clients=[%d,%d]\n", 
+			room->room_id, room->count_client, 
+			room->client_info[0], room->client_info[1]);
 
     client_info->room_id = -1;
     client_info->ready = READY_NOT;
