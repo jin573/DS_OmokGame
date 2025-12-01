@@ -12,6 +12,8 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <ctype.h>   // isdigit, isalnum, toupper 사용
+#include <termios.h>
+#include <sys/select.h>
 
 // socket_server
 typedef int SOCKET;
@@ -100,6 +102,13 @@ static inline const char* room_state_str(enum RoomState s){
         case STATE_WAIT:  return "WAIT";
         case STATE_START: return "START";
         default:          return "UNKNOWN";
+    }
+}
+static inline const char* ready_state_str(enum ReadyState s){
+    switch(s){
+        case READY_YES: return "READY_YES";
+        case READY_NO:  return "READY_NO";
+        default:        return "READY_NOT";
     }
 }
 

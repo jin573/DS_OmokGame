@@ -3,6 +3,11 @@
 *.o
 socket_server
 socket_client
+client_version
+game_client
 
 #code
 socket_client.c
+client_version.c
+game_client.c
+game_client.h

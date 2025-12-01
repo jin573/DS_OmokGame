@@ -163,4 +163,3 @@ void *t_function(void *arg){
 	close(client_sock);
 	return NULL;
 }
-

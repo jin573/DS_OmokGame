@@ -12,6 +12,7 @@ void handle_leave(int client_sock, PlayerView* client_info);
 void handle_quit(int client_sock, PlayerView* client_info);
 
 void set_nickname(PlayerView* client_info, char* nickname);
+bool check_all_client_ready(RoomInfo* room);
 void remove_client_in_room(int client_sock, PlayerView* client_info);
-
+static void broadcast_to_room(RoomInfo* room, const char* msg);
 #endif
