@@ -68,7 +68,8 @@ void handle_join(int client_sock, PlayerView* client_info, char* buffer){
 	//client_info->seat = ;//random
     client_info->ready = READY_NO;
 	//client_info->stone = ;//random
-
+	//client_info->turn = ;//random
+	//
     room->client_info[room->count_client] = client_info->client_id;
     room->count_client++;
 	reorder_room_clients(room);
@@ -111,11 +112,11 @@ void handle_ready(int client_sock, PlayerView* client_info){
 
 		printf("===*===* game start *===*===\n");
 		room->room_state = STATE_START;
-		//color and seat setting
-		broadcast_to_room(room, "START\n");
+		//color, turn and seat setting -> broadcast_to_room
+		broadcast_to_room(room, "START");
 		printf("[Handler] Game started, broadcast done\n");
 	}else{
-		broadcast_to_room(room, "READY\n");
+		broadcast_to_room(room, "READY");
 	}	
 
 }
@@ -185,17 +186,33 @@ void remove_client_in_room(int client_sock, PlayerView* client_info){
 
     client_info->room_id = -1;
     client_info->ready = READY_NOT;
-    //in Game -> add reset seat, stone -> extends
+    //in Game -> add reset seat, stone, turn -> extends
 	//and change room state also
 }
 
 static void broadcast_to_room(RoomInfo* room, const char* msg){
+	int first_seat = rand()%2;
+
 	for(int i=0; i<MAX_CLIENT; i++){
 		int cid = room->client_info[i]; 
 		if(cid != -1){
 			PlayerView* p = search_client(&client_list, cid); 
-			printf("[broadcast] send %s\n", msg);
-			send(p->client_id, msg, strlen(msg), 0);
+			//color, turn and seat setting
+			p->seat = (i==0) ? first_seat : 1 -first_seat;
+			p->stone = (p->seat == 0) ? STONE_BLACK : STONE_WHITE;
+			p->turn = (p->seat == 0) ? 1 : 0 ;
+           	char send_buf[128];
+			const char* color_str = NULL;
+
+			if(strcmp(msg, "START") == 0){
+				color_str = (p->stone == STONE_BLACK) ? "black" : "white";
+				snprintf(send_buf, sizeof(send_buf), "START %s %d %d\n", color_str, p->turn, p->seat);
+			}
+
+            printf("[broadcast] send %s to client %d color: %s\n", send_buf, p->client_id, color_str);
+            send(p->client_id, send_buf, strlen(send_buf), 0);
 		}
 	}
 }
+
+

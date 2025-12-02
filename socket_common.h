@@ -14,6 +14,7 @@
 #include <ctype.h>   // isdigit, isalnum, toupper 사용
 #include <termios.h>
 #include <sys/select.h>
+#include <time.h>
 
 // socket_server
 typedef int SOCKET;
@@ -42,32 +43,13 @@ static inline void err_display_err_code(int errorcode){
 // struct RoomInfo
 #define MAX_CLIENT 2
 #define MAX_ROOM   10
+#define B_SIZE 15
 
 enum RoomState{
     STATE_WAIT,
     STATE_START
 };
 
-typedef struct RoomInfo{
-    int room_id;
-    int count_client;
-    enum RoomState room_state;
-    int client_info[MAX_CLIENT];
-} RoomInfo;
-
-static inline void reorder_room_clients(RoomInfo* room){
-	int reorder_arr[MAX_CLIENT] = {-1, -1};
-	int idx = 0;
-
-	for(int i=0; i<MAX_CLIENT; i++){
-		if(room->client_info[i] != -1){
-			reorder_arr[idx++] = room->client_info[i];
-		}
-	}
-
-	room->client_info[0] = reorder_arr[0];
-	room->client_info[1] = reorder_arr[1];
-}
 // 플레이어 구조체
 #ifndef MAX_NICK
 #define MAX_NICK 32   // 닉네임 최대길이
@@ -87,6 +69,29 @@ enum ReadyState {
     READY_YES = 1
 };
 
+//info room
+typedef struct RoomInfo{
+    int room_id;
+    int count_client;
+    enum RoomState room_state;
+    int client_info[MAX_CLIENT];
+    enum StoneColor board[B_SIZE][B_SIZE];
+} RoomInfo;
+
+static inline void reorder_room_clients(RoomInfo* room){
+	int reorder_arr[MAX_CLIENT] = {-1, -1};
+	int idx = 0;
+
+	for(int i=0; i<MAX_CLIENT; i++){
+		if(room->client_info[i] != -1){
+			reorder_arr[idx++] = room->client_info[i];
+		}
+	}
+
+	room->client_info[0] = reorder_arr[0];
+	room->client_info[1] = reorder_arr[1];
+}
+
 // 플레이어 정보
 typedef struct PlayerView {
     int  client_id;                 // client socket fd
@@ -95,6 +100,7 @@ typedef struct PlayerView {
     int  seat;                      // 0: 흑(선공), 1: 백(후공)
     enum ReadyState ready;          // 준비 상태
     enum StoneColor stone;          // 돌 색
+	int turn; //in game
 } PlayerView;
 
 static inline const char* room_state_str(enum RoomState s){
@@ -133,7 +139,6 @@ static int recv_line(int sock, char* buf, size_t cap){
 }
 
 // client 리스트
-
 typedef struct ClientNode{
     struct ClientNode* next;
     PlayerView*  data;   // client data

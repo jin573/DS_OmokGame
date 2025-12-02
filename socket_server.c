@@ -1,6 +1,7 @@
 #include "./socket_common.h"
 #include "./client_list.h"
 #include "./server_handler.h"
+#include "./game_server.h"
 
 void init_rooms(struct RoomInfo rooms[]);
 PlayerView init_client(int sock, struct sockaddr_in *addr);
@@ -11,6 +12,8 @@ struct RoomInfo rooms[MAX_ROOM];
 ClientList client_list = {NULL, 0};
 
 int main(int argc, char *argv[]) {
+	srand(time(NULL));
+
 	//error msg
 	//port number ex)./socket_test 8080
 	if(argc < 2){
@@ -92,7 +95,12 @@ void init_rooms(struct RoomInfo rooms[]){
 		rooms[i].room_id = i;
 		rooms[i].count_client = 0;
 		rooms[i].room_state = STATE_WAIT;
-		memset(rooms[i].client_info, -1, sizeof(rooms[i].client_info)); //not 0
+		memset(rooms[i].client_info, -1, sizeof(rooms[i].client_info)); //not 0	
+		for(int y=0; y<B_SIZE; y++){
+            for(int x=0; x<B_SIZE; x++){
+                rooms[i].board[y][x] = STONE_NONE;
+            }
+        }
 	}
 
 }
@@ -106,7 +114,7 @@ PlayerView init_client(int client_sock, struct sockaddr_in* addr){
 	client_info.seat = -1;
 	client_info.ready = READY_NOT;
 	client_info.stone = STONE_NONE;
-
+	client_info.turn = -1;
 	return client_info;
 }
 
@@ -154,6 +162,8 @@ void *t_function(void *arg){
 			printf("[Handler] client request QUIT so call Handle_LEAVE\n");
 			handle_quit(client_sock, client_info);
             break;
+		} else if(strncmp(buffer, "MOVE", 4) == 0){
+			handle_game(client_sock, client_info, buffer);
 		} else {
             printf("[Server] Unknown command: %s\n", buffer);
 		 }
