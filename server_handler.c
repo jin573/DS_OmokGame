@@ -79,6 +79,8 @@ void handle_join(int client_sock, PlayerView* client_info, char* buffer){
 			room_state_str(room->room_state), room->count_client, 
 			room->client_info[0], room->client_info[1]);
 	send(client_sock, "OK JOIN\n", strlen("OK JOIN\n"), 0);
+	printf("[Handler][JOIN] Sent OK JOIN to client %d\n", client_info->client_id);
+
 }
 
 void handle_ready(int client_sock, PlayerView* client_info){	
@@ -202,6 +204,20 @@ void remove_client_in_room(int client_sock, PlayerView* client_info){
     client_info->ready = READY_NOT;
     //in Game -> add reset seat, stone, turn -> extends
 	//and change room state also
+	
+	client_info->seat  = -1;
+	client_info->stone = STONE_NONE;
+	client_info->turn  = 0;
+
+	int cnt = 0;
+	for(int i=0;i<MAX_CLIENT;i++){
+	    if(room->client_info[i] != -1) cnt++;
+	}
+	if(cnt == 0){
+	    room->room_state = STATE_WAIT;
+	    memset(room->board, 0, sizeof(room->board));
+	}
+
 }
 
 static void broadcast_to_room(RoomInfo* room, const char* msg){
@@ -238,5 +254,6 @@ static void broadcast_to_room(RoomInfo* room, const char* msg){
 			}
 	}
 }
+
 
 

@@ -156,6 +156,5 @@ typedef struct {
     ClientList         *client_list;
 } ThreadArg;
 
-extern PlayerView g_player;
 #endif
 
