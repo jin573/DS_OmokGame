@@ -97,6 +97,11 @@ void handle_ready(int client_sock, PlayerView* client_info){
 			client_info->nick, client_info->client_id, 
 			ready_state_str(client_info->ready));
 	
+	if(room->count_client <2){
+		printf("[READY] only one client in room. skip broadcast.\n");
+        return;
+	}
+
 	bool ready_flag = check_all_client_ready(room);
 
 	if(ready_flag){
@@ -107,17 +112,23 @@ void handle_ready(int client_sock, PlayerView* client_info){
 
 		printf("[Handler][READY] ALL CLIENT SET READY\n");
 		printf("==after 3 sec goto in game==\n");
-	
 		sleep(3);
-
 		printf("===*===* game start *===*===\n");
-		room->room_state = STATE_START;
+
 		//color, turn and seat setting -> broadcast_to_room
-		broadcast_to_room(room, "START");
+		room->room_state = STATE_START;
+		broadcast_to_room(room, "START\n");
 		printf("[Handler] Game started, broadcast done\n");
-	}else{
-		broadcast_to_room(room, "READY");
-	}	
+		return;
+	}
+
+	printf("[READY] Not all ready. Broadcast READY to opponent.\n");
+
+    for(int i=0;i<MAX_CLIENT;i++){
+        int cid = room->client_info[i];
+        if(cid == -1 || cid == client_sock) continue; 
+        send(cid, "READY\n", strlen("READY\n"), 0);
+    }
 
 }
 
@@ -148,10 +159,13 @@ void set_nickname(PlayerView* client_info, char* nickname){
 bool check_all_client_ready(RoomInfo* room){
 	//check all player's state
 	for(int i=0; i<MAX_CLIENT; i++){
-		PlayerView* all_client = search_client(&client_list, room->client_info[i]);
+		int cid = room->client_info[i];
+		if(cid == -1) continue; 
+		
+		PlayerView* client = search_client(&client_list, cid);
 		printf("[Handler][READY][SEARCH CLIENT] client_id: %d, ptr=%p\n", 
-				room->client_info[i], (void*)all_client);
-		if(!all_client || all_client->ready != READY_YES){
+				room->client_info[i], (void*)client);
+		if(!client || client->ready != READY_YES){
 			return false;
 		}
 	}
@@ -197,6 +211,7 @@ static void broadcast_to_room(RoomInfo* room, const char* msg){
 		int cid = room->client_info[i]; 
 		if(cid != -1){
 			PlayerView* p = search_client(&client_list, cid); 
+
 			//color, turn and seat setting
 			p->seat = (i==0) ? first_seat : 1 -first_seat;
 			p->stone = (p->seat == 0) ? STONE_BLACK : STONE_WHITE;
@@ -204,14 +219,23 @@ static void broadcast_to_room(RoomInfo* room, const char* msg){
            	char send_buf[128];
 			const char* color_str = NULL;
 
-			if(strcmp(msg, "START") == 0){
+			if(strncmp(msg, "START", 5) == 0){
 				color_str = (p->stone == STONE_BLACK) ? "black" : "white";
 				snprintf(send_buf, sizeof(send_buf), "START %s %d %d\n", color_str, p->turn, p->seat);
+			 	printf("[broadcast] send %s to client %d color: %s\n", send_buf, p->client_id, color_str);
+                send(p->client_id, send_buf, strlen(send_buf), 0);
+
+                if (p->turn == 1) {
+                    send(p->client_id, "YOURTURN\n", strlen("YOURTURN\n"), 0);
+                }
+                continue;
 			}
 
-            printf("[broadcast] send %s to client %d color: %s\n", send_buf, p->client_id, color_str);
+			
+ 			snprintf(send_buf, sizeof(send_buf), "%s\n", msg);
             send(p->client_id, send_buf, strlen(send_buf), 0);
-		}
+
+			}
 	}
 }
 
