@@ -11,3 +11,9 @@ socket_client.c
 client_version.c
 game_client.c
 game_client.h
+game_client_old.c
+
+#ui code
+omok_ui.*
+room.*
+game_logic.*
