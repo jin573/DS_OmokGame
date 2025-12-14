@@ -1,5 +1,8 @@
 # Network Omok Game Server (C / Socket / pthread / Linux)
 
+<img src="https://github.com/user-attachments/assets/1a2c993b-3a45-4ed9-8a74-5bb030142e7a" style="width:499px; height:325px;" alt="스크린샷 1" />
+<img src="https://github.com/user-attachments/assets/c8c65227-35aa-42cf-b182-89519c7a1e69" style="width:499px; height:325px;" alt="스크린샷 2" />
+
 ## Overview
 This project is a multiplayer Omok (Gomoku) game server implemented in C using
 TCP sockets and POSIX threads, and the ncurses library for terminal-based display.
