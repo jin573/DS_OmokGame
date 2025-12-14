@@ -76,6 +76,8 @@ typedef struct RoomInfo{
     enum RoomState room_state;
     int client_info[MAX_CLIENT];
     enum StoneColor board[B_SIZE][B_SIZE];
+	
+	pthread_mutex_t mutex;
 } RoomInfo;
 
 static inline void reorder_room_clients(RoomInfo* room){

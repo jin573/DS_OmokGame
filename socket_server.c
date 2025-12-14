@@ -101,6 +101,8 @@ void init_rooms(struct RoomInfo rooms[]){
 				rooms[i].board[y][x] = STONE_NONE;
 			}
 		}
+
+		pthread_mutex_init(&rooms[i].mutex, NULL);
 	}
 
 }

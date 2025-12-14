@@ -26,11 +26,13 @@ void handle_list(int client_sock){
 	strcat(response, "ROOMS ");
 
 	for(int i=0; i<MAX_ROOM; i++){
+		pthread_mutex_lock(&rooms[i].mutex);
 		char buf[64];
 		snprintf(buf, sizeof(buf), "%d:%d:%s ",
 				rooms[i].room_id,
 				rooms[i].count_client,
 				room_state_str(rooms[i].room_state));
+		pthread_mutex_unlock(&rooms[i].mutex);
 		strcat(response, buf);
 	}
 	strcat(response, "\n");
@@ -51,14 +53,17 @@ void handle_join(int client_sock, PlayerView* client_info, char* buffer){
 	}
 
 	RoomInfo* room = &rooms[num];	
+	pthread_mutex_lock(&room->mutex);
 
 	if(room->room_state!= STATE_WAIT){
+		pthread_mutex_unlock(&room->mutex);
 		printf("[Handler] ROOM NOT ENTER\n");
 		send(client_sock, "ERR START\n", strlen("ERR START\n"), 0);
 		return;
 	}
 
 	if(room->count_client >= 2){
+		pthread_mutex_unlock(&room->mutex);
 		printf("[Handler] ROOM FULL\n");
 		send(client_sock, "ERR FULL\n", strlen("ERR FULL\n"), 0); 
 		return;
@@ -73,6 +78,7 @@ void handle_join(int client_sock, PlayerView* client_info, char* buffer){
 	room->client_info[room->count_client] = client_info->client_id;
 	room->count_client++;
 	reorder_room_clients(room);
+	pthread_mutex_unlock(&room->mutex);
 
 	printf("[Handler][JOIN] Client %s (%d) joined room %d. Room state: %s, count=%d, clients=[%d,%d]\n", 
 			client_info->nick, client_info->client_id, num, 
@@ -86,8 +92,12 @@ void handle_join(int client_sock, PlayerView* client_info, char* buffer){
 void handle_ready(int client_sock, PlayerView* client_info){	
 
 	RoomInfo* room = &rooms[client_info->room_id];
-
+	bool move_time = false;
+	
+	pthread_mutex_lock(&room->mutex);
+	
 	if(room->room_state == STATE_START){
+		pthread_mutex_unlock(&room->mutex);
 		printf("[Handler] Already Started\n");
 		send(client_sock, "ERR START\n", strlen("ERR START\n"), 0);
 		return;
@@ -100,38 +110,40 @@ void handle_ready(int client_sock, PlayerView* client_info){
 			ready_state_str(client_info->ready));
 
 	if(room->count_client <2){
+		pthread_mutex_unlock(&room->mutex);
 		printf("[READY] only one client in room. skip broadcast.\n");
 		return;
 	}
 
-	bool ready_flag = check_all_client_ready(room);
-
+	bool ready_flag = room->count_client == 2 && check_all_client_ready(room);
+	
 	if(ready_flag){
-		if(room->room_state != STATE_WAIT){
-			send(client_sock, "ERR STARTING\n", strlen("ERR STARTING\n"), 0);
-			return;
-		}
-
+		room->room_state = STATE_START;
+	}
+	
+	pthread_mutex_unlock(&room->mutex);
+	
+	if(ready_flag){
 		printf("[Handler][READY] ALL CLIENT SET READY\n");
 		printf("==after 3 sec goto in game==\n");
 		sleep(3);
 		printf("===*===* game start *===*===\n");
 
 		//color, turn and seat setting -> broadcast_to_room
-		room->room_state = STATE_START;
 		broadcast_to_room(room, "START\n");
 		printf("[Handler] Game started, broadcast done\n");
 		return;
+	}else{
+		for(int i=0;i<MAX_CLIENT;i++){
+			int cid = room->client_info[i];
+			if(cid == -1 || cid == client_sock) continue; 
+			send(cid, "READY\n", strlen("READY\n"), 0);
+		}
+		printf("[READY] Not all ready. Broadcast READY to opponent.\n");
+
 	}
-
-	printf("[READY] Not all ready. Broadcast READY to opponent.\n");
-
-	for(int i=0;i<MAX_CLIENT;i++){
-		int cid = room->client_info[i];
-		if(cid == -1 || cid == client_sock) continue; 
-		send(cid, "READY\n", strlen("READY\n"), 0);
-	}
-
+	
+	
 }
 
 
@@ -157,11 +169,12 @@ void handle_quit(int client_sock, PlayerView* client_info){
 void handle_game_over(RoomInfo* room){
 	if(!room) return;
 
+	pthread_mutex_lock(&room->mutex);
 	room->room_state = STATE_WAIT;
 
 	for(int i=0; i<MAX_CLIENT; i++){
 		int cid = room->client_info[i];
-
+		
 		if(cid != -1){
 			char msg[64];
 			snprintf(msg, sizeof(msg), "END\n");
@@ -169,7 +182,8 @@ void handle_game_over(RoomInfo* room){
 			printf("[Handler] Game END\n");
 		}
 	}
-
+	
+	pthread_mutex_unlock(&room->mutex);
 }
 
 void set_nickname(PlayerView* client_info, char* nickname){
@@ -202,6 +216,8 @@ void remove_client_in_room(int client_sock, PlayerView* client_info){
 	}
 
 	RoomInfo* room = &rooms[client_info->room_id];
+	pthread_mutex_lock(&room->mutex);
+
 	printf("[Handler][REMOVE] Removing Client %s (%d) from room %d. Count before=%d\n", 
 			client_info->nick, client_info->client_id, room->room_id,
 			room->count_client);
@@ -223,6 +239,7 @@ void remove_client_in_room(int client_sock, PlayerView* client_info){
 		}
 
 		room->room_state = STATE_WAIT;
+		pthread_mutex_unlock(&room->mutex);
 		return;
 	}
 
@@ -256,7 +273,8 @@ void remove_client_in_room(int client_sock, PlayerView* client_info){
 	printf("[Handler][REMOVE] Room %d after removal: count=%d, clients=[%d,%d]\n",
 			room->room_id, room->count_client,
 			room->client_info[0], room->client_info[1]);
-
+	
+	pthread_mutex_unlock(&room->mutex);
 
 }
 
