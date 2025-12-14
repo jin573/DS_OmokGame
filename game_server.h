@@ -1,4 +1,3 @@
-// handler_move.h
 #ifndef HANDLER_MOVE_H
 #define HANDLER_MOVE_H
 

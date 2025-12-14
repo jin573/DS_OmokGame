@@ -40,7 +40,7 @@ void handle_game(int client_sock, PlayerView* client_info, const char* msg) {
     }
 
     room->board[y][x] = client_info->stone;
-	client_info->turn = 0;    
+  	client_info->turn = 0;
     PlayerView* opponent = NULL;
 	
 	for(int i=0;i<MAX_CLIENT;i++){
@@ -116,4 +116,5 @@ int check_win(enum StoneColor board[B_SIZE][B_SIZE], int y, int x, int stone){
     }
     return 0;
 }
+
 

@@ -10,6 +10,7 @@ void handle_join(int client_sock, PlayerView* client_info, char* buffer);
 void handle_ready(int client_sock, PlayerView* client_info);
 void handle_leave(int client_sock, PlayerView* client_info);
 void handle_quit(int client_sock, PlayerView* client_info);
+void handle_game_over(RoomInfo* room);
 
 void set_nickname(PlayerView* client_info, char* nickname);
 bool check_all_client_ready(RoomInfo* room);

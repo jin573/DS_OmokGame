@@ -17,28 +17,28 @@ int main(int argc, char *argv[]) {
 	//error msg
 	//port number ex)./socket_test 8080
 	if(argc < 2){
-        fprintf(stderr, "Usage: %s <port>\n", argv[0]);
-        exit(1);
-    }
+		fprintf(stderr, "Usage: %s <port>\n", argv[0]);
+		exit(1);
+	}
 
 	//room setting 
 	init_rooms(rooms);
 	printf("Room initialized (10 rooms ready)\n");
 
 	//socket setting
-    struct sockaddr_in server, client; //socket info
+	struct sockaddr_in server, client; //socket info
 	int request_sock, client_sock;//socket fd
 	socklen_t client_len;//client socket
 	char buffer[256]; 
 
-    if((request_sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0){
-        err_quit("socket()");
-    }
-    
+	if((request_sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0){
+		err_quit("socket()");
+	}
+
 	memset(&server, 0, sizeof(server));
-    server.sin_family = AF_INET;
-    server.sin_addr.s_addr = INADDR_ANY;
-    server.sin_port = htons((u_short) atoi(argv[1]));
+	server.sin_family = AF_INET;
+	server.sin_addr.s_addr = INADDR_ANY;
+	server.sin_port = htons((u_short) atoi(argv[1]));
 
 	int opt = 1;
 	if (setsockopt
@@ -48,25 +48,25 @@ int main(int argc, char *argv[]) {
 
 	//func socket
 	//bind
-    if(bind(request_sock, (struct sockaddr*)&server, sizeof(server)) < 0){
-       err_quit("bind()");
-    }
+	if(bind(request_sock, (struct sockaddr*)&server, sizeof(server)) < 0){
+		err_quit("bind()");
+	}
 
 	//listen
-    if(listen(request_sock, SOMAXCONN) < 0){
-        err_quit("listen()");
-    }
+	if(listen(request_sock, SOMAXCONN) < 0){
+		err_quit("listen()");
+	}
 
-    printf("Server listening on port %s\n", argv[1]);
+	printf("Server listening on port %s\n", argv[1]);
 
 	//listen while
-    while(1){
+	while(1){
 		client_len = sizeof(client);
 		client_sock = accept(request_sock, (struct sockaddr*)&client, &client_len);
-        if (client_sock < 0) {
-            err_quit("accept()");
-            continue;
-        }else{
+		if (client_sock < 0) {
+			err_quit("accept()");
+			continue;
+		}else{
 			//success accept()
 			//create pthread
 			ThreadArg *targ = malloc(sizeof(ThreadArg));
@@ -85,8 +85,8 @@ int main(int argc, char *argv[]) {
 		}
 	}
 	//close
-    close(request_sock);
-    return 0;
+	close(request_sock);
+	return 0;
 }
 
 
@@ -97,17 +97,17 @@ void init_rooms(struct RoomInfo rooms[]){
 		rooms[i].room_state = STATE_WAIT;
 		memset(rooms[i].client_info, -1, sizeof(rooms[i].client_info)); //not 0	
 		for(int y=0; y<B_SIZE; y++){
-            for(int x=0; x<B_SIZE; x++){
-                rooms[i].board[y][x] = STONE_NONE;
-            }
-        }
+			for(int x=0; x<B_SIZE; x++){
+				rooms[i].board[y][x] = STONE_NONE;
+			}
+		}
 	}
 
 }
 
 PlayerView init_client(int client_sock, struct sockaddr_in* addr){
 	PlayerView client_info;
-		
+
 	client_info.client_id = client_sock;
 	memset(client_info.nick, 0, sizeof(client_info.nick));
 	client_info.room_id = -1;
@@ -127,7 +127,7 @@ void *t_function(void *arg){
 	struct sockaddr_in client = targ->client;
 	free(targ);
 
-	
+
 	PlayerView* client_info = malloc(sizeof(PlayerView));
 	*client_info = init_client(client_sock, &client);
 	char buffer[1024];
@@ -139,37 +139,44 @@ void *t_function(void *arg){
 		printf("[Server] client accept: %s client num: %d\n", 
 				inet_ntoa(client.sin_addr),
 				client_info->client_id);
-		
+
 		//change nickname
 		int n = recv_line(client_sock, buffer, sizeof(buffer));
-        if(n <= 0){
+		if(n <= 0){
 			printf("[Server] Client %d disconnected\n", client_info->client_id);
 			break;
 		}
 
-        buffer[n] = '\0';
-        if(strncmp(buffer, "NICK", 4) == 0){
-            handle_nick(client_sock, client_info, buffer);
-        } else if(strncmp(buffer, "LIST", 4) == 0){
-            handle_list(client_sock);
-        } else if(strncmp(buffer, "JOIN", 4) == 0){
-            handle_join(client_sock, client_info, buffer);
-        } else if(strncmp(buffer, "READY", 5) == 0){
-            handle_ready(client_sock, client_info);
-        } else if(strncmp(buffer, "LEAVE", 5) == 0){
-            handle_leave(client_sock, client_info);
-        } else if(strncmp(buffer, "QUIT", 4) == 0){
-			printf("[Handler] client request QUIT so call Handle_LEAVE\n");
+		buffer[n] = '\0';
+		if(strncmp(buffer, "NICK", 4) == 0){
+			handle_nick(client_sock, client_info, buffer);
+		} else if(strncmp(buffer, "LIST", 4) == 0){
+			handle_list(client_sock);
+		} else if(strncmp(buffer, "JOIN", 4) == 0){
+			handle_join(client_sock, client_info, buffer);
+		} else if(strncmp(buffer, "READY", 5) == 0){
+			handle_ready(client_sock, client_info);
+		} else if(strncmp(buffer, "LEAVE", 5) == 0){
+			handle_leave(client_sock, client_info);
+		} else if(strncmp(buffer, "QUIT", 4) == 0){
 			handle_quit(client_sock, client_info);
-            break;
+			break;
 		} else if(strncmp(buffer, "MOVE", 4) == 0){
 			handle_game(client_sock, client_info, buffer);
+		} else if(strncmp(buffer, "WIN", 3) == 0){
+			if(client_info->room_id != -1){
+				RoomInfo* room = &rooms[client_info->room_id];
+				handle_game_over(room);
+			}else{
+				printf("[Server] WIN command\n");
+			}
 		} else {
-            printf("[Server] Unknown command: %s\n", buffer);
-		 }
-	
+			printf("[Server] Unknown command: %s\n", buffer);
+		}
+
 	}
 	remove_client(&client_list, client_info->client_id);
 	close(client_sock);
 	return NULL;
 }
+
