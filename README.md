@@ -15,7 +15,6 @@ TCP 소켓과 POSIX 스레드(pthread), 그리고 터미널 기반 화면 출력
 
 ## Features
 - TCP 소켓 기반 서버
-- Blocking I/O 기반 서버 설계
 - 단일 연결 리스트를 이용한 클라이언트 관리
 - 방(Room) 기반 게임 관리 (방당 2명)
 - 턴 기반 오목 게임 플레이 (15x15 보드)
@@ -34,7 +33,53 @@ TCP 소켓과 POSIX 스레드(pthread), 그리고 터미널 기반 화면 출력
     - 방 상태 (WAIT, START)
     - 플레이어 슬롯 정보
     - 전용 mutex (pthread_mutex_t)
+## Core Data Structures
 
+### RoomInfo (Game Room)
+각 Room은 두 명의 플레이어가 공유하는 하나의 오목 게임 세션입니다.  
+방 단위 mutex를 통해 게임 상태의 일관성을 보장합니다.
+
+```c
+typedef struct RoomInfo{
+    int room_id;                         // 방 번호
+    int count_client;                    // 방에 참여한 클라이언트 수
+    enum RoomState room_state;            // WAIT / START
+    int client_info[MAX_CLIENT];          // 클라이언트 socket fd
+    enum StoneColor board[15][15];        // 오목 보드 상태
+    pthread_mutex_t mutex;                // 방 단위 mutex
+} RoomInfo;
+```
+
+
+
+### Responsibilities
+- 공유 게임 보드 상태 관리
+- 방 상태 전이 (WAIT → START → RESET)
+- 동시 착수 방지를 위한 임계 구역 보호
+
+
+### PlayerView (Player State)
+각 클라이언트는 자신의 게임 상태를 표현하는 PlayerView 구조체를 가집니다.
+플레이어 고유 상태와 방의 공유 상태를 분리하여 관리합니다.
+```c
+typedef struct PlayerView {
+    int  client_id;                 // 클라이언트 socket fd
+    char nick[32];                  // 닉네임
+    int  room_id;                   // 참여 중인 방 번호
+    int  seat;                      // 0: 흑(선공), 1: 백(후공)
+    enum ReadyState ready;          // 준비 상태
+    enum StoneColor stone;          // 돌 색
+    int  turn;                      // 자신의 턴 여부
+} PlayerView;
+```
+
+
+
+### Responsibilities
+- 플레이어의 방 소속 정보 관리
+- 턴 및 준비 상태 관리
+
+  
 ## Concurrency Design (Core Concept)
 게임 진행 중 발생할 수 있는 레이스 컨디션을 방지하기 위해  
 각 방(Room)은 자체 mutex를 소유합니다.
